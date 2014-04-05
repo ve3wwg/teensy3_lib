@@ -61,7 +61,7 @@ LDSCRIPT: To configure for the teensy3.0, alter the macro LDSCRIPT to
 point to the mk20dx128.ld (or mk20dx128_sbrk.ld).
 
 TOOLCHAIN: Changing the value of ARCH allows a different command name
-prefix to be used (it defaults to arm-non-eabi-).
+prefix to be used (it defaults to arm-none-eabi-).
 
 
 YOUR APPLICATION MAKEFILE:
