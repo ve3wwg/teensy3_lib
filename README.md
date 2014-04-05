@@ -22,14 +22,14 @@ $ use_arm
 OSX/Linux INSTALL:
 ==================
 
-1. Install the teensy3_lib directory to /opt/teensy3_lib.
-2. cd /opt/teensy3_lib
-3. sudo make
+    1. Install the teensy3_lib directory to /opt/teensy3_lib.
+    2. cd /opt/teensy3_lib
+    3. sudo make
 
 If you need to re-make after changes, do:
 
-1. make distclean
-2. make clean
+    1. make distclean
+    2. make clean
 
 
 INSTALLING TO ANOTHER DIRECTORY:
@@ -38,14 +38,14 @@ INSTALLING TO ANOTHER DIRECTORY:
 If installing this library to another location, like perhaps
 /usr/local/share/teensy3_lib, then:
 
-1. Edit the file teensy3_lib/Makefile.conf
-2. Change the value of the macro TOP_DIR to read:
+    1. Edit the file teensy3_lib/Makefile.conf
+    2. Change the value of the macro TOP_DIR to read:
 
-   TOP_DIR=/usr/local/share/teensy3_lib
+    TOP_DIR=/usr/local/share/teensy3_lib
 
-3. cd /usr/local/share/teensy3_lib
-4. sudo make distclean (if necessary)
-5. sudo make
+    3. cd /usr/local/share/teensy3_lib
+    4. sudo make distclean (if necessary)
+    5. sudo make
 
 
 CUSTOM CONFIGURATIONS:
@@ -67,30 +67,30 @@ prefix to be used (it defaults to arm-none-eabi-).
 YOUR APPLICATION MAKEFILE:
 ==========================
 
-include /opt/teensy3_lib/Makefile.conf
-
-all:	main.hex
-
-main.elf: main.o
-	$(CXX) main.o $(LDFLAGS) -o main.elf
-
-main.hex: main.elf
-	$(OBJSIZE) main.elf
-	$(OBJCOPY) -O ihex -R .eeprom main.elf main.hex	
-
-clean:
-	rm -f *.o
-
-clobber: clean
-	rm -f main main.hex
+    include /opt/teensy3_lib/Makefile.conf
+    
+    all:	main.hex
+    
+    main.elf: main.o
+    	$(CXX) main.o $(LDFLAGS) -o main.elf
+    
+    main.hex: main.elf
+    	$(OBJSIZE) main.elf
+    	$(OBJCOPY) -O ihex -R .eeprom main.elf main.hex	
+    
+    clean:
+    	rm -f *.o
+    
+    clobber: clean
+    	rm -f main main.hex
 
 
 YOUR BUILD:
 ===========
 
-1. make
-2. make clean     (cleans object files)
-3. make clobber   (cleans object files and final executables)
+    1. make
+    2. make clean     (cleans object files)
+    3. make clobber   (cleans object files and final executables)
 
 
 MAIN PROGRAM:
@@ -101,32 +101,32 @@ the Arduino setup() or loop() functions. If you wish to
 use the Arduino setup() and loop(), remove the macro
 definition -DNON_ARDUINO from /opt/teensy3_lib/Makefile.conf .
 
-#include <Arduino.h>
-#include <usb_api.h>
-#include <usb_serial.h>
-
-#include <stdlib.h>
-
-usb_serial_class serial;
-
-int
-main(int argc,char **argv) {
-
-        serial.begin(9600);
-
-        serial.write("Hello World!!!\n",18);
-        serial.send_now();
-
-        delay(1500);
-
-        serial.write("Bye.\n",8);
-        serial.send_now();
-
-        delay(1000);
-
-        serial.end();
-        return 0;
-}
+    #include <Arduino.h>
+    #include <usb_api.h>
+    #include <usb_serial.h>
+    
+    #include <stdlib.h>
+    
+    usb_serial_class serial;
+    
+    int
+    main(int argc,char **argv) {
+    
+            serial.begin(9600);
+    
+            serial.write("Hello World!!!\n",18);
+            serial.send_now();
+    
+            delay(1500);
+    
+            serial.write("Bye.\n",8);
+            serial.send_now();
+    
+            delay(1000);
+    
+            serial.end();
+            return 0;
+    }
 
 --
 Warren Gay ve3wwg@gmail.com
