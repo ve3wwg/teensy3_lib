@@ -92,5 +92,41 @@ YOUR BUILD:
 2. make clean     (cleans object files)
 3. make clobber   (cleans object files and final executables)
 
+
+MAIN PROGRAM:
+=============
+
+Note that your program will use a real "main" program - NOT
+the Arduino setup() or loop() functions. If you wish to
+use the Arduino setup() and loop(), remove the macro
+definition -DNON_ARDUINO from /opt/teensy3_lib/Makefile.conf .
+
+#include <Arduino.h>
+#include <usb_api.h>
+#include <usb_serial.h>
+
+#include <stdlib.h>
+
+usb_serial_class serial;
+
+int
+main(int argc,char **argv) {
+
+        serial.begin(9600);
+
+        serial.write("Hello World!!!\n",18);
+        serial.send_now();
+
+        delay(1500);
+
+        serial.write("Bye.\n",8);
+        serial.send_now();
+
+        delay(1000);
+
+        serial.end();
+        return 0;
+}
+
 --
 Warren Gay ve3wwg@gmail.com
