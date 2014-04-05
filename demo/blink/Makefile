@@ -1,9 +1,10 @@
 ######################################################################
-#  test2/Makefile
-#  Warren Gay ve3wwg	Sat Apr  5 09:53:41 2014
+#  demo/blink/Makefile
+#  Warren Gay ve3wwg	Sat Apr  5 17:16:14 2014
 ######################################################################
 
 include /opt/teensy3_lib/Makefile.conf
+
 
 all:	blink.hex
 
@@ -19,3 +20,6 @@ clean:
 
 distclean: clean
 	rm -f blink.elf blink.hex blink.d *~
+
+
+# End demo/blink/Makefile
