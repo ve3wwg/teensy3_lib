@@ -135,5 +135,18 @@ TESTING:
 See teensy3_lib/demo/blink:
 
 
+DEMO PROGRAMS:
+==============
+
+Arduino demo programs that compile for the teensy3, are found in the
+teensy3_lib/demo subdirectory. The top-level teensy3_lib/demo/Makefile
+will build all demo programs by typing "make". 
+
+Otherwise cd to the project directory of interest, and type "make" to
+build the project.
+
+To clean up, use "make distclean".
+
+
 --
 Warren Gay ve3wwg@gmail.com
