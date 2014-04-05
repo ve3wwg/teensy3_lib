@@ -128,5 +128,12 @@ definition -DNON_ARDUINO from /opt/teensy3_lib/Makefile.conf .
             return 0;
     }
 
+
+TESTING:
+========
+
+See teensy3_lib/demo/blink:
+
+
 --
 Warren Gay ve3wwg@gmail.com
