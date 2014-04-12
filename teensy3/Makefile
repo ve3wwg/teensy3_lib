@@ -5,6 +5,8 @@
 
 include $(CURDIR)/../Makefile.conf
 
+DEFNS	+= -DUSB_SERIAL
+
 C_FILES 	:= $(wildcard *.c)
 CPP_FILES 	:= $(wildcard *.cpp)
 OBJS 		:= $(C_FILES:.c=.o) $(CPP_FILES:.cpp=.o)
