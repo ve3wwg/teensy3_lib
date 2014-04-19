@@ -35,8 +35,8 @@ MEMORY
 }
 
 /* produce a link error if there is not this amount of RAM for these sections */
-_minimum_stack_size = 2K;
-_minimum_heap_size = 16K;
+_minimum_stack_size = 16K;	/* Just for testing link */
+_minimum_heap_size =  16K;
 
 /* INCLUDE common.ld */
 
@@ -157,9 +157,11 @@ SECTIONS
 	.stack :
 	{
 	    . = ALIGN(4);
+            _sstack = .;
 	    . = . + _minimum_stack_size;
 	    . = ALIGN(4);
 	} >RAM
 
-	_estack = ORIGIN(RAM) + LENGTH(RAM);
+	_test_estack = ORIGIN(RAM) + LENGTH(RAM);
+	_estack = ORIGIN(RAM) + 64 * 1024;
 }
