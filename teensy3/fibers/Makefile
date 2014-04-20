@@ -6,9 +6,8 @@
 include $(CURDIR)/../../Makefile.conf
 
 C_FILES 	:= $(wildcard *.c)
-CPP_FILES 	:= $(wildcard *.cpp)
 ASM_FILES	:= $(wildcard *.s)
-OBJS 		:= $(C_FILES:.c=.o) $(CPP_FILES:.cpp=.o) $(ASM_FILES:.s=.o)
+OBJS 		:= $(C_FILES:.c=.o) $(ASM_FILES:.s=.o)
 
 all:	$(LIB_DIR)/libfibers.a
 
