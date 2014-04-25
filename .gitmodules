@@ -1,0 +1,3 @@
+[submodule "teensy3/Signals"]
+	path = teensy3/Signals
+	url = git@github.com:crteensy/Signals.git
