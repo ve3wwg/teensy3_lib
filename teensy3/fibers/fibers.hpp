@@ -23,8 +23,8 @@ extern "C" {
 }
 
 struct fiber_t {
+	// Saved Registers
 	uint32_t	sp;		// Saved sp register
-	uint32_t	r0;		// Arg 1 at function startup, else saved r0
 	uint32_t	r2;		//  after the function has begun
 	uint32_t	r3;		// Saved r3 etc.
 	uint32_t	r4;
@@ -37,6 +37,9 @@ struct fiber_t {
 	uint32_t	r11;
 	uint32_t	r12;
 	uint32_t	lr;		// Return address (pc)
+	// Parameters
+	uint32_t	funcptr;	// Start function ptr
+	uint32_t	arg;		// Startup arg value
 	uint32_t	stack_size;	// Stack size for this main/coroutine
 };
 
