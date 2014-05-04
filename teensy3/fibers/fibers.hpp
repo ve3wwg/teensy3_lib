@@ -22,6 +22,13 @@ extern "C" {
 	typedef void (*fiber_func_t)(void *arg);
 }
 
+enum FiberState {
+	FiberCreated,			// Fiber created, but not yet started
+	FiberExecuting,			// Fiber is executing
+	FiberReturned,			// Fiber has terminated
+	FiberInvalid			// Invalid fiberx value
+};
+
 struct fiber_t {
 	// Saved Registers
 	uint32_t	sp;		// Saved sp register
@@ -36,11 +43,13 @@ struct fiber_t {
 	uint32_t	r10;
 	uint32_t	r11;
 	uint32_t	r12;
-	uint32_t	lr;		// Return address (pc)
+	void		*lr;		// Return address (pc)
 	// Parameters
-	uint32_t	funcptr;	// Start function ptr
-	uint32_t	arg;		// Startup arg value
+	fiber_func_t	funcptr;	// Start function ptr
+	void		*arg;		// Startup arg value
 	uint32_t	stack_size;	// Stack size for this main/coroutine
+	// State
+	FiberState	state;		// Current fiber state
 };
 
 //////////////////////////////////////////////////////////////////////
@@ -49,23 +58,27 @@ struct fiber_t {
 
 template <unsigned max_fibers=16>
 class Fibers {
-	fiber_t			fibers[max_fibers];	// Collection of fiber states
-	uint16_t		n_fibers;		// Number of active fibers
-	uint16_t		cur_crx;		// Index to currently executing coroutine
+	volatile fiber_t	fibers[max_fibers];	// Collection of fiber states
+	volatile uint16_t	n_fibers;		// Number of active fibers
+	volatile uint16_t	cur_crx;		// Index to currently executing coroutine
 	bool			instrument;		// Instrument stack for stack size measurement
 	uint32_t		pattern;		// Pattern to use on stack for instrumentation
 
 	uint32_t *end_stack();				// Return end of stack address (requires _sstack)
 
 public:	Fibers(uint32_t main_stack=8192,bool instrument=false,uint32_t pattern_override=0xA5A5A5A5);
-
-	unsigned create(fiber_func_t func,void *arg,uint32_t stack_size);
-
-	inline unsigned coroutine() { return cur_crx; }	// Return current coroutine number (0 == main)
-	void yield();					// Yield CPU to next coroutine
 	inline uint32_t size() { return n_fibers; }	// Return the current # of coroutines
 
-	uint32_t stack_size(uint16_t coroutine);	// Return the approximate stack usage for specified coroutine 
+	unsigned create(fiber_func_t func,void *arg,uint32_t stack_size);
+	inline unsigned current() { return cur_crx; }	// Return current coroutine number (0 == main)
+	void yield();					// Yield CPU to next coroutine
+
+	FiberState state(uint32_t fiberx);		// Return the state of a fiber
+	FiberState join(uint32_t fiberx);		// Return when the specified fiber has ended
+
+	FiberState restart(uint32_t fiberx,fiber_func_t func,void *arg); // Restart fiber after it has terminated
+
+	uint32_t stack_size(uint32_t fiberx);		// Return the approximate stack usage for specified coroutine 
 };
 
 
@@ -76,8 +89,9 @@ public:	Fibers(uint32_t main_stack=8192,bool instrument=false,uint32_t pattern_o
 extern "C" {
 	extern uint32_t *fiber_getsp();
 	extern void fiber_set_main(uint32_t stack_size);
-	extern void fiber_create(fiber_t *fcb,uint32_t stack_size,fiber_func_t func,void *arg);
-	extern void fiber_swap(fiber_t *new_cr,fiber_t *cur_cr);
+	extern void fiber_create(volatile fiber_t *fcb,uint32_t stack_size,fiber_func_t func,void *arg);
+	extern void fiber_swap(volatile fiber_t *new_cr,volatile fiber_t *cur_cr);
+	extern void fiber_restart(volatile fiber_t *fiber,fiber_func_t func,void *arg);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -138,7 +152,7 @@ Fibers<max_fibers>::create(fiber_func_t func,void *arg,uint32_t stack_size) {
 	if ( n_fibers >= max_fibers )
 		return 0;		// Failed: too many fibers
 
-	fiber_t &new_cr = fibers[n_fibers++];
+	volatile fiber_t &new_cr = fibers[n_fibers++];
 
 	fiber_create(&new_cr,stack_size,func,arg);
 	new_cr.stack_size = stack_size;
@@ -168,8 +182,8 @@ Fibers<max_fibers>::yield() {
 	if ( nextx >= n_fibers )
 		nextx = 0;		// Wrap around to main context at the end
 
-	fiber_t& last_cr = fibers[cur_crx];	// Current context
-	fiber_t& next_cr = fibers[nextx];	// Next context
+	volatile fiber_t& last_cr = fibers[cur_crx];	// Current context
+	volatile fiber_t& next_cr = fibers[nextx];	// Next context
 	cur_crx = nextx;			// Change the context no.
 
 	fiber_swap(&next_cr,&last_cr);		// Make the switch
@@ -189,15 +203,15 @@ Fibers<max_fibers>::yield() {
 
 template <unsigned max_fibers>
 uint32_t
-Fibers<max_fibers>::stack_size(uint16_t coroutine) {
+Fibers<max_fibers>::stack_size(uint32_t fiberx) {
 
 	if ( !instrument )				// Not instrumented
 		return ~0;				// .. so size unknown
 
-	if ( coroutine >= n_fibers )
+	if ( fiberx >= n_fibers )
 		return ~0;				// Invalid fiber/coroutine #
 
-	fiber_t& crentry = fibers[coroutine];		// Access requested coroutine
+	fiber_t& crentry = fibers[fiberx];		// Access requested coroutine
 	uint32_t *sp = (uint32_t *)crentry.sp;		// Get it's sp
 	uint32_t *ep = sp - crentry.stack_size/4;	// stack_size has been rounded to a word multiple
 	uint32_t count = 0;				// Initialize count
@@ -207,6 +221,67 @@ Fibers<max_fibers>::stack_size(uint16_t coroutine) {
 
 	return count;					// Bytes
 }
+
+
+//////////////////////////////////////////////////////////////////////
+// Return the state of a fiber:
+//
+// RETURNS:
+//	FiberCreated		Fiber created, but not yet started
+//	FiberExecuting		Fiber is executing
+//	FiberReturned		Fiber has terminated (returned)
+//	FiberInvalid		Invalid fiberx value
+//////////////////////////////////////////////////////////////////////
+
+template <unsigned max_fibers>
+FiberState
+Fibers<max_fibers>::state(uint32_t fiberx) {
+
+	if ( fiberx >= n_fibers )
+		return FiberInvalid;			// Invalid fiberx value given
+
+	volatile fiber_t& crentry = fibers[fiberx];	// Access requested coroutine
+	return crentry.state;				// Return its state
+}
+
+//////////////////////////////////////////////////////////////////////
+// Join with the executing fiber.
+//
+// RETURNS:
+//	FiberInvalid		Fiberx does not refer to a valid fiber
+//	FiberReturned		Fiber has terminated (successful)
+//////////////////////////////////////////////////////////////////////
+
+template <unsigned max_fibers>
+FiberState
+Fibers<max_fibers>::join(uint32_t fiberx) {
+	FiberState s;
+
+	if ( fiberx >= n_fibers )
+		return FiberInvalid;			// Invalid fiberx: Nothing to join with
+
+	while ( (s = state(fiberx)) != FiberReturned )
+		this->yield();				// Keep waiting
+
+	return s;
+}
+
+//////////////////////////////////////////////////////////////////////
+// Restart a terminated fiber
+//////////////////////////////////////////////////////////////////////
+
+template <unsigned max_fibers>
+FiberState
+Fibers<max_fibers>::restart(uint32_t fiberx,fiber_func_t func,void *arg) {
+
+	if ( fiberx >= n_fibers )
+		return FiberInvalid;			// Invalid fiberx: Nothing to join with
+
+	volatile fiber_t& fiber = fibers[fiberx];
+	fiber_restart(&fiber,func,arg);
+	return fiber.state;
+}
+
 
 //////////////////////////////////////////////////////////////////////
 // Protected: Return address of end of stack
@@ -298,14 +373,24 @@ Fibers<max_fibers>::end_stack() {
 // Fibers globally. Global access makes it available from other
 // modules when it is time to "yield".
 //
-// The Fibers class is a template class, requiring a template parameter.
-// By default 15 fibers + main are defined:
+// Global yield() Routine:
+// -----------------------
+//
+// To make maximum use of CPU, declare this routine somewhere:
+//
+//	void yield() {
+//		fibers.yield();
+//	}
+//
+// The Fibers class is a template class, requiring a template parameter,
+// that declares the maximum number of fibers you intend to create.
+// By default 15 fibers + main are assumed.
 //
 //     Fibers<> fibers;            // Defaults to 15 + main fibers max
 //     Fibers<4> fibers;           // Up to 3 fibers + main
 //
 // By default 8K of stack is reserved for the main fiber. To change
-// the allocation for main, specify a stack size:
+// the allocation for main (only), specify a stack size:
 //
 //     Fibers<4> fibers(3000);     // Allocate 3000 bytes to main stack
 //
@@ -318,40 +403,40 @@ Fibers<max_fibers>::end_stack() {
 // Once this has been done, stack space has been reserved for the
 // main thread.
 // 
-// To create a coroutine, you invoke the Fibers::create() method:
+// To create a fiber, you invoke the Fibers::create() method:
 // 
 //     fibers.create(foo,foo_arg,4000); // Stack for foo is 4000 bytes
 // 
-// It returns an unsigned number 1-n, for identification if you
-// need it. This example will start function:
+// It returns an unsigned number > 0 for identification if you
+// need it (main is always zero). This example will start function:
 // 
 //     void foo(void *foo_arg)
 // 
 // with an allocated stack of 4000 bytes.
 // 
-// Additional coroutines can be created from any executing 
-// coroutine context.
+// Additional fiber (coroutines) can be created from any executing 
+// fiber context.
 // 
 // From this point on, the main routine or the executing coroutine
 // (in foo) call the yield method to give up the CPU:
 // 
 //     fibers.yield();
 // 
-// Scheduling is done in a simple round-robin fashion, giving
-// the CPU to the next coroutine in sequence.
+// or the global yield() function, if you set that up.
 // 
-// COROUTINES THAT "RETURN":
-// =========================
+// Scheduling is done in round-robin fashion, giving the CPU to
+// the next coroutine in sequence.
+// 
+// FIBERS THAT "RETURN":
+// =====================
 // 
 // If a coroutine (other than main) "returns", it will simply
-// start to execute again. Note that after restarting, the
-// coroutine's argument "arg" will likely be trash, and should
-// not be used again. It will simply represent the last saved
-// value for register "r0".
-// 
-// A flag should be set in your coroutine the first time it
-// runs, so that it may make this important distinction at
-// startup.
+// it will cease to execute (it actually does execute in
+// a loop which just calls yield). It's state is marked as
+// FiberReturned.
+//
+// The fiber can be restarted using the Fibers::restart()
+// method, allowing a worker fiber to be controlled.
 // 
 // DETERMINING STACK SIZE:
 // =======================
@@ -383,6 +468,30 @@ Fibers<max_fibers>::end_stack() {
 // ========
 // When allocating stack space, be sure to include an extra
 // amount for use by interrupt service routines.
+//
+// LDSCRIPT CHANGE:
+// ================
+//
+// This package needs to know where the bottom of your stack is
+// through the use of the symbol _sstack. Your current ldscript
+// should already define an _estack symbol.
+//
+// Towards the end of the ldscript that I use, I have:
+//
+//	/* this just checks there is enough RAM for the stack */
+//	.stack :
+//	{
+//	    . = ALIGN(4);
+//          _sstack = .;
+//	    . = . + _minimum_stack_size;
+//	    . = ALIGN(4);
+//	} >RAM
+//
+//	_estack = ORIGIN(RAM) + 64 * 1024;
+//
+// Notice how the _sstack symbol was inserted to identify the low
+// (bottom) point of the stack.
+//
 //////////////////////////////////////////////////////////////////////
 
 // End fibers.hpp
