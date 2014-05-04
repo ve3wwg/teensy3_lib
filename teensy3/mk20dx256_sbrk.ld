@@ -162,6 +162,5 @@ SECTIONS
 	    . = ALIGN(4);
 	} >RAM
 
-	_test_estack = ORIGIN(RAM) + LENGTH(RAM);
 	_estack = ORIGIN(RAM) + 64 * 1024;
 }
