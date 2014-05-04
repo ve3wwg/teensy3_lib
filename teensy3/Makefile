@@ -18,9 +18,9 @@ $(LIB_DIR)/libteensy3.a: $(OBJS)
 	$(AR) cr $(LIB_DIR)/libteensy3.a $(OBJS)
 
 clean:
-	rm -f *.o
+	rm -f *.o *.d
 
 distclean: clean
-	rm -f libteensy3.a $(LIB_DIR)/libteensy3.a
+	rm -f libteensy3.a $(LIB_DIR)/libteensy3.a 
 
 # End teensy3/Makefile
