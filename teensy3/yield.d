@@ -1,1 +1,0 @@
-yield.o: yield.c
