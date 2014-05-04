@@ -2,6 +2,7 @@
 
 extern "C" int main(void)
 {
+#ifndef NON_ARDUINO
 #if !defined(ARDUINO)
 
 	// To use Teensy 3.0 without Arduino, simply put your code here.
@@ -23,6 +24,7 @@ extern "C" int main(void)
 		loop();
 		yield();
 	}
+#endif
 #endif
 }
 
