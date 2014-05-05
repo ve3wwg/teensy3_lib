@@ -4,7 +4,7 @@
 ///////////////////////////////////////////////////////////////////////
 
 #include <stdint.h>
-#include "./fibers.hpp"
+#include <fibers.h>
 
 extern "C" {
 	static void fiber_start();
