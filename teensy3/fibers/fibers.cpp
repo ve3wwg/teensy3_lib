@@ -41,7 +41,7 @@ fiber_start() {
 	asm("mov r1, %[value]\n" : : [value] "r" (fiber->funcptr));	// r1 now holds the function ptr to call
 
 	asm("push {r2-r12}");
-	asm("blx r1\n");			// func(arg) call
+	asm("blx  r1\n");			// func(arg) call
 	asm("pop  {r2-r12}");
 
 	fiber->state = FiberReturned;		// Fiber has returned from its function
@@ -74,6 +74,7 @@ fiber_create(volatile fiber_t *fiber,uint32_t stack_size,fiber_func_t func,void 
 	fiber->sp = stackroot;			// Save as Fiber's sp
 	fiber->lr = (void *) fiber_start;	// Fiber startup code
 	fiber->state = FiberCreated;		// Set state of this fiber
+	fiber->initial_sp = stackroot;		// Save sp for restart()
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -104,6 +105,7 @@ fiber_restart(volatile fiber_t *fiber,fiber_func_t func,void *arg) {
 	fiber->arg	= arg;						// New arg value
 	fiber->state	= FiberCreated;					// Fiber is being launched
 	fiber->lr	= (void *)fiber_start;				// Address of next instruction
+	fiber->sp	= fiber->initial_sp;				// Reset sp
 }
 
 // End fibers.cpp

@@ -48,6 +48,7 @@ struct fiber_t {
 	fiber_func_t	funcptr;	// Start function ptr
 	void		*arg;		// Startup arg value
 	uint32_t	stack_size;	// Stack size for this main/coroutine
+	uint32_t	initial_sp;	// Initial stack pointer (for restart)
 	// State
 	FiberState	state;		// Current fiber state
 };
