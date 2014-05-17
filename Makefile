@@ -9,7 +9,7 @@ lib/libteensy3.a::
 	$(MAKE) -wC ./teensy3 -$(MAKEFLAGS) TOP_DIR=$(TOP_DIR)
 
 lib/libfibers.a::
-	$(MAKE) -wC ./teensy3/fibers -$(MAKEFLAGS) TOP_DIR=$(TOP_DIR)
+	$(MAKE) -wC ./teensy3/teensy3_fibers -$(MAKEFLAGS) TOP_DIR=$(TOP_DIR)
 
 clean::
 	$(MAKE) -wC ./teensy3 -$(MAKEFLAGS) TOP_DIR=$(TOP_DIR) clean
