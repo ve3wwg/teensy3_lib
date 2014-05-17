@@ -1,3 +1,6 @@
 [submodule "teensy3/Signals"]
 	path = teensy3/Signals
 	url = git@github.com:crteensy/Signals.git
+[submodule "teensy3/teensy3_fibers"]
+	path = teensy3/teensy3_fibers
+	url = git@github.com:ve3wwg/teensy3_fibers.git
