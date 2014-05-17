@@ -2,33 +2,25 @@
 // slip.hpp -- SLIP Protocol Class
 // Date: Fri May 16 19:54:36 2014  Warren Gay ve3wwg
 ///////////////////////////////////////////////////////////////////////
+//
 // SLIP protocol object :
 //
 // This is useful for "framing" serial binary messages between the
-// Arduino and the PC (possibly over USB), for example.
+// local host processor and the remote host.
 //
-// ===================================================================
+// I/O is performed through user provided read and write callbacks.
 //
-// The user defined read routine must return 1 when a byte is returned.
-// A zero indicates EOF (useful when debugging with files), but may
-// not apply to the Arduino code. The read routine should return -1
-// if an I/O error occurred (no data was returned).
+// NOTES:
 //
-// The user defined write routine should return zero when successful,
-// but otherwise return -1 if an error occurred.
-//
-// SLIP::recv_packet() returns the packet length received.  It
-// will return -2 if the packet was truncated (too long for the
-// supplied buffer). -1 is returned if an I/O error was encountered.
-//
-// SLIP::send_packet() returns zero when sucessful, else -1 indicates
-// an I/O error occurred.
-//
-// The user_data parameter should be set to zero if not used. 
-// It is always passed to the read_byte() and write_byte() routines
-// and may point to anything the user routines find useful.
-//
-// ===================================================================
+//  1.  This implements the standard uncompressed SLIP by default. 
+//  2.  A non-SLIP standard 8-bit CRC can be automatically appended
+//      to each packet written when enabled by enable_crc8(true).
+//      Each packet received will have the last byte checked (not returned)
+//      to see if it matches the calculated CRC. A failed status of
+//      ES_CRC is returned if it does not match.
+//  3.  This particular software copy is intended to be used by POSIX systems
+//      communicating with AVR/Teensy systems (over a serial connection,
+//      which may be Bluetooth).
 
 #ifndef SLIP_HPP
 #define SLIP_HPP
@@ -36,8 +28,8 @@
 #include <stdint.h>
 
 extern "C" {
-	typedef uint8_t (*slipread_t)();
-	typedef void (*slipwrite_t)(uint8_t b);
+	typedef uint8_t (*slipread_t)();        // Read byte user routine
+	typedef void (*slipwrite_t)(uint8_t b); // Write byte user routine
 }
 
 class SLIP {
