@@ -215,6 +215,16 @@ Sqlite3Db::step() {
 					} else	*col = 0;
 				}
 				break;
+			case RT_string :
+				{
+					std::string *col = (std::string *)r.loc;
+					
+					if ( !r.is_null ) {
+						const char *text = (const char *) sqlite3_column_text(stmt,rx);
+						*col = text;
+					} else	col->clear();
+				}
+				break;
 			case RT_blob :
 				{
 					char *col = (char *)r.loc;
@@ -296,6 +306,15 @@ Sqlite3Db::qbind(const char *qv) {
 	return status == SQLITE_OK;
 }
 
+//////////////////////////////////////////////////////////////////////
+// IMPORTANT: Use this only if the string does not vary in value
+//////////////////////////////////////////////////////////////////////
+
+bool
+Sqlite3Db::qbind(const std::string& qv) {
+	return sqlite3_bind_text(stmt,++bindx,qv.c_str(),-1,0);
+}
+
 bool
 Sqlite3Db::qbind(const char *qblob,int nbytes) {
 	status = sqlite3_bind_blob(stmt,++bindx,qblob,nbytes,0);
@@ -347,6 +366,18 @@ Sqlite3Db::rbind(char *rv,unsigned maxbytes) {
 	r.length = maxbytes;
 	r.rbytes = 0;				// Filled in later
 	rvec.push_back(r);
+}
+
+void
+Sqlite3Db::rbind(std::string& rv) {
+	s_result r;
+
+	r.type = RT_string;
+	r.loc = &rv;
+	r.length = 0;
+	r.rbytes = 0;				// Filled in later
+	rvec.push_back(r);
+
 }
 
 void

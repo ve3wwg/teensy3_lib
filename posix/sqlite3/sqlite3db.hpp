@@ -25,6 +25,7 @@ class Sqlite3Db {
 		RT_int64,
 		RT_double,
 		RT_text,
+		RT_string,			// std::string
 		RT_blob
 	};
 
@@ -55,12 +56,14 @@ public:	Sqlite3Db();
 	bool qbind(sqlite3_int64 qv);			// Bind int64 to query
 	bool qbind(double qv);				// Bind double to query
 	bool qbind(const char *qv);			// Bind text to query
+	bool qbind(const std::string& qv);		// Bind std::string to query (use only when qv does not change!)
 	bool qbind(const char *qblob,int nbytes);	// Bind blob to query
 
 	void rbind(int& rv);				// Bind int result (3rd)
 	void rbind(sqlite3_int64& rv);			// Bind int64 result
 	void rbind(double& rv);				// Bind double result
 	void rbind(char *rv,unsigned maxbytes);		// Bind text result
+	void rbind(std::string& rv);			// Bind text to std::string object
 	void rbind(char *rblob,int maxbytes);		// Bind blob result
 
 	unsigned rlength(void *loc);			// Length of returned result
