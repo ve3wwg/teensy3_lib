@@ -17,12 +17,15 @@ $(TOP_DIR)/lib/libteensy.a: sqlite3db.o
 	$(AR) r $(TOP_DIR)/lib/libteensy.a sqlite3db.o
 
 testdb: testdb.o $(TOP_DIR)/lib/libteensy.a
-	$(CXX) testdb.o -o testdb $(LDFLAGS) -lteensy
+	$(CXX) testdb.o -o testdb $(LDFLAGS) -lteensy -lsqlite3
 
 check:	testdb
+	./testdb	# Creates test.db if non-existing
+	./testdb	# Re-opens test.db
+	rm -f test.db
 
 clean:
-	rm -f *.o *.d t1.t t2.t t3.t testdb
+	rm -f *.o testdb
 
 distclean: clean
 	rm -f $(TOP_DIR)/libteensy.a testdb errs.t
