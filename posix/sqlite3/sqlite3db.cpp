@@ -90,6 +90,50 @@ Sqlite3Db::prepare(const char *sql) {
 	return true;
 }
 
+bool
+Sqlite3Db::execute(const char *sql) {
+	bool ok, r = false;
+	int status;
+
+	ok = prepare(sql);
+	if ( !ok )
+		goto xit;
+
+	status = step();
+
+	switch ( status ) {
+	case SQLITE_DONE:
+	case SQLITE_ROW:
+		r = true;
+		break;
+
+	case SQLITE_BUSY:
+	case SQLITE_ERROR:
+		r = false;
+		break;
+	case SQLITE_MISUSE:
+	default :
+		assert(0);
+	}
+
+xit:	rclear();
+	return r;
+}
+
+void
+Sqlite3Db::rclear() {
+	if ( !sqldb )
+		return;
+
+	if ( stmt ) {
+		sqlite3_finalize(stmt);
+		stmt = 0;
+		trunc = false;
+		bindx = 0;
+		rvec.clear();
+	}
+}
+
 int
 Sqlite3Db::step() {
 
@@ -209,7 +253,7 @@ Sqlite3Db::step() {
 
 bool
 Sqlite3Db::qbind_null() {
-	status = sqlite3_bind_null(stmt,bindx++);
+	status = sqlite3_bind_null(stmt,++bindx);
 	if ( status != SQLITE_OK )
 		errmsg = sqlite3_errmsg(sqldb);
 
@@ -218,7 +262,7 @@ Sqlite3Db::qbind_null() {
 
 bool
 Sqlite3Db::qbind(int qv) {
-	status = sqlite3_bind_int(stmt,bindx++,qv);
+	status = sqlite3_bind_int(stmt,++bindx,qv);
 	if ( status != SQLITE_OK )
 		errmsg = sqlite3_errmsg(sqldb);
 
@@ -227,7 +271,7 @@ Sqlite3Db::qbind(int qv) {
 
 bool
 Sqlite3Db::qbind(sqlite3_int64 qv) {
-	status = sqlite3_bind_int64(stmt,bindx++,qv);
+	status = sqlite3_bind_int64(stmt,++bindx,qv);
 	if ( status != SQLITE_OK )
 		errmsg = sqlite3_errmsg(sqldb);
 
@@ -236,7 +280,7 @@ Sqlite3Db::qbind(sqlite3_int64 qv) {
 
 bool
 Sqlite3Db::qbind(double qv) {
-	status = sqlite3_bind_double(stmt,bindx++,qv);
+	status = sqlite3_bind_double(stmt,++bindx,qv);
 	if ( status != SQLITE_OK )
 		errmsg = sqlite3_errmsg(sqldb);
 
@@ -245,7 +289,7 @@ Sqlite3Db::qbind(double qv) {
 
 bool
 Sqlite3Db::qbind(const char *qv) {
-	status = sqlite3_bind_text(stmt,bindx++,qv,-1,0);
+	status = sqlite3_bind_text(stmt,++bindx,qv,-1,0);
 	if ( status != SQLITE_OK )
 		errmsg = sqlite3_errmsg(sqldb);
 
@@ -254,7 +298,7 @@ Sqlite3Db::qbind(const char *qv) {
 
 bool
 Sqlite3Db::qbind(const char *qblob,int nbytes) {
-	status = sqlite3_bind_blob(stmt,bindx++,qblob,nbytes,0);
+	status = sqlite3_bind_blob(stmt,++bindx,qblob,nbytes,0);
 	if ( status != SQLITE_OK )
 		errmsg = sqlite3_errmsg(sqldb);
 
@@ -336,6 +380,33 @@ Sqlite3Db::is_rnull(void *loc) {
 			return r.is_null;
 	}
 	return true;
+}
+
+bool
+Sqlite3Db::is_table(const char *table_name) {
+	bool ok, r = false;
+	int res_count = 0;
+
+	ok = prepare(
+		"select count(*) \n"
+		"from sqlite_master \n"
+		"where name = ? and type = 'table' \n"
+	);
+	if ( !ok )
+		goto xit;
+
+	ok = qbind(table_name);
+	if ( !ok )
+		goto xit;
+
+	rbind(res_count);
+
+	if ( step() == SQLITE_ROW ) {
+		r = res_count > 0;
+	} else	r = false;
+
+xit:	rclear();
+	return r;
 }
 
 // End sqlite3db.cpp
