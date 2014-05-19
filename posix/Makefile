@@ -5,7 +5,7 @@
 
 include Makefile.conf
 
-SHPROJS	= slip sqlite3db
+SHPROJS	= slip sqlite3db sliptty
 PROJS	=
 
 all:	lib/libteensy.a
