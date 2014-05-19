@@ -13,3 +13,6 @@
 [submodule "posix/sqlite3db"]
 	path = posix/sqlite3db
 	url = git@github.com:ve3wwg/sqlite3db.git
+[submodule "posix/sliptty"]
+	path = posix/sliptty
+	url = git@github.com:ve3wwg/sliptty.git
