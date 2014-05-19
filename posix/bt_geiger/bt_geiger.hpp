@@ -6,7 +6,7 @@
 #ifndef BT_GEIGER_HPP
 #define BT_GEIGER_HPP
 
-#include "slip.hpp"
+#include "sliptty.hpp"
 
 #define UNKNOWN_BT 		"/dev/cu.Bluetooth"
 #define KEY_BLUETOOTH_DEV	"bluetooth_dev"
@@ -42,7 +42,7 @@ union u_packets {
 	s_current_time	pkt_curtime;
 };
 
-extern SLIP bluetooth;
+extern SlipTty bluetooth;
 
 #endif // BT_GEIGER_HPP
 
