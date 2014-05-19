@@ -12,7 +12,6 @@
 #include <termios.h>
 #include <assert.h>
 
-#include "slip.hpp"
 #include "sqlite3db.hpp"
 #include "bt_geiger.hpp"
 
@@ -26,31 +25,13 @@
 static std::string opt_database;			// Pathname of sqlite3 database
 static std::string opt_bluetooth_dev = UNKNOWN_BT;	// Pathname of bluetooth device
 static int opt_speed = 38400;				// Bluetooth baud rate
-static int btdev = -1;					// Open fd of /dev/cu.<bluetooth_dev>
 
 static int opt_help = false;
 static int opt_errs = false;
 
 static Sqlite3Db db;
 
-static uint8_t
-bt_read() {
-	int rc;
-	uint8_t b;
-
-	do	{
-		rc = read(btdev,&b,1);
-	} while ( rc == -1 );			// EINTR may be one of the expected errors here
-
-	return b;
-}
-
-static void
-bt_write(uint8_t b) {
-	write(btdev,&b,1);
-}
-
-SLIP bluetooth(bt_read,bt_write);			// Bluetooth SLIP protocol I/O object
+SlipTty bluetooth;
 
 static void
 send_current_time() {
@@ -254,8 +235,8 @@ main(int argc,char **argv) {
 	// Open the Bluetooth serial device
 	//////////////////////////////////////////////////////////////
 
-	btdev = open(opt_bluetooth_dev.c_str(),O_RDWR);
-	if ( btdev < 0 ) {
+	int rc = bluetooth.open(opt_bluetooth_dev.c_str(),opt_speed,2048);
+	if ( rc != 0 ) {
 		fprintf(stderr,"%s: Bluetooth device '%s'\n",
 			strerror(errno),
 			opt_bluetooth_dev.c_str());
@@ -263,42 +244,14 @@ main(int argc,char **argv) {
 		exit(3);
 	}
 
-	//////////////////////////////////////////////////////////////
-	// Set the Bluetooth serial parameters for raw I/O
-	//////////////////////////////////////////////////////////////
-
-	{
-		struct termios tattr;
-		int rc;
-
-		rc = tcgetattr(btdev,&tattr);
-		if ( rc == -1 ) {
-			fprintf(stderr,"%s: tcgetattr(bluetooth_dev=%d)\n",
-				strerror(errno),
-				btdev);
-			db.close();
-			exit(4);
-		}
-
-		cfmakeraw(&tattr);
-		rc = cfsetspeed(&tattr,opt_speed);
-		rc = tcsetattr(btdev,TCSANOW,&tattr);
-		if ( rc == -1 ) {
-			fprintf(stderr,"%s: tcsetattr(bluetooth_dev=%d,TCSANOW)\n",
-				strerror(errno),
-				btdev);
-			db.close();
-			exit(4);
-		}
-	}
-
 	db.close();
 
-	printf("Bluetooth device: %s on fd %d, baud %d\n",opt_bluetooth_dev.c_str(),btdev,opt_speed);
+	printf("Bluetooth device: %s, baud %d\n",opt_bluetooth_dev.c_str(),opt_speed);
 
-	bluetooth.enable_crc8(true);
 	sleep(1);
+
 	send_current_time();
+	bluetooth.close();
 
 	return 0;
 }

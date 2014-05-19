@@ -12,7 +12,6 @@
 #include <termios.h>
 #include <assert.h>
 
-#include "slip.hpp"
 #include "sqlite3db.hpp"
 #include "bt_geiger.hpp"
 
@@ -21,45 +20,20 @@
 
 static std::string opt_serial_dev = "/dev/cu.usbserial-A703CYQ5";	// Must be provided as option
 static int opt_speed = 38400;						// Serial baud rate
-static int btdev = -1;							// Open fd of serial dev
 
 static int opt_help = false;
 static int opt_errs = false;
 
-static uint8_t
-bt_read() {
-	int rc;
-	uint8_t b;
+SlipTty bluetooth;
 
-	do	{
-		rc = read(btdev,&b,1);
-	} while ( rc == -1 );			// EINTR may be one of the expected errors here
-
-	return b;
-}
-
-static void
-bt_write(uint8_t b) {
-	write(btdev,&b,1);
-}
-
-SLIP bluetooth(bt_read,bt_write);			// Bluetooth SLIP protocol I/O object
-
-static char rxbuf[2048];
-static unsigned pktlen;
-
-static u_packets *packet = (u_packets *)rxbuf;
+u_packets *packet = 0;
 
 static uint8_t
 recv_packet() {
-	SLIP::Status s;
+	unsigned pktlen = 0;
 
 	for (;;) {
-		s = bluetooth.read(rxbuf,sizeof rxbuf,pktlen);
-		if ( s != SLIP::ES_Ok ) {
-			fprintf(stderr,"SLIP::Status: %d\n",s);
-			continue;
-		}
+		packet = (u_packets *)bluetooth.read(pktlen);
 
 		switch ( packet->pkt_type ) {
 		case PT_CurrentTime :
@@ -126,44 +100,15 @@ main(int argc,char **argv) {
 	// Open the serial device
 	//////////////////////////////////////////////////////////////
 
-	btdev = open(opt_serial_dev.c_str(),O_RDWR);
-	if ( btdev < 0 ) {
+	int rc = bluetooth.open(opt_serial_dev.c_str(),opt_speed,2048);
+	if ( rc != 0 ) {
 		fprintf(stderr,"%s: Serial device '%s'\n",
-			strerror(errno),
+			strerror(rc),
 			opt_serial_dev.c_str());
 		exit(3);
 	}
 
-	//////////////////////////////////////////////////////////////
-	// Set the serial parameters for raw I/O
-	//////////////////////////////////////////////////////////////
-
-	{
-		struct termios tattr;
-		int rc;
-
-		rc = tcgetattr(btdev,&tattr);
-		if ( rc == -1 ) {
-			fprintf(stderr,"%s: tcgetattr(bluetooth_dev=%d)\n",
-				strerror(errno),
-				btdev);
-			exit(4);
-		}
-
-		cfmakeraw(&tattr);
-		rc = cfsetspeed(&tattr,opt_speed);
-		rc = tcsetattr(btdev,TCSANOW,&tattr);
-		if ( rc == -1 ) {
-			fprintf(stderr,"%s: tcsetattr(bluetooth_dev=%d,TCSANOW)\n",
-				strerror(errno),
-				btdev);
-			exit(4);
-		}
-	}
-
-	printf("Serial device: %s on fd %d, baud %d\n",opt_serial_dev.c_str(),btdev,opt_speed);
-
-	bluetooth.enable_crc8(true);
+	printf("Serial device: %s, baud %d\n",opt_serial_dev.c_str(),opt_speed);
 
 	for (;;) {
 		uint8_t pkt_type = recv_packet();
