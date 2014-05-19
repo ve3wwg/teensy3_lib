@@ -5,17 +5,21 @@
 
 include Makefile.conf
 
-PROJS	= SLIP
+SHPROJS	= slip sqlite3db
+PROJS	=
 
 all:	lib/libteensy.a
 
 lib/libteensy.a::
+	for proj in $(SHPROJS) ; do $(MAKE) -wC ./$$proj -$(MAKEFLAGS) -f Makefile.posix TOP_DIR=$(TOP_DIR); done
 	for proj in $(PROJS) ; do $(MAKE) -wC ./$$proj -$(MAKEFLAGS) TOP_DIR=$(TOP_DIR); done
 
 clean::
+	for proj in $(SHPROJS) ; do $(MAKE) -wC ./$$proj -$(MAKEFLAGS) -f Makefile.posix clean TOP_DIR=$(TOP_DIR); done
 	for proj in $(PROJS) ; do $(MAKE) -wC ./$$proj -$(MAKEFLAGS) TOP_DIR=$(TOP_DIR) clean; done
 
 distclean::
+	for proj in $(SHPROJS) ; do $(MAKE) -wC ./$$proj -$(MAKEFLAGS) -f Makefile.posix distclean TOP_DIR=$(TOP_DIR); done
 	for proj in $(PROJS) ; do $(MAKE) -wC ./$$proj -$(MAKEFLAGS) TOP_DIR=$(TOP_DIR) distclean; done
 
 # End
