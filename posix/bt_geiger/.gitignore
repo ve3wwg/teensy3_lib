@@ -1,0 +1,4 @@
+*.o 
+*.a
+bt_geiger
+bt_dummy
