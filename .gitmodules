@@ -4,3 +4,12 @@
 [submodule "teensy3/teensy3_fibers"]
 	path = teensy3/teensy3_fibers
 	url = git@github.com:ve3wwg/teensy3_fibers.git
+[submodule "posix/slip"]
+	path = posix/slip
+	url = git@github.com:ve3wwg/slip.git
+[submodule "teensy3/slip"]
+	path = teensy3/slip
+	url = git@github.com:ve3wwg/slip.git
+[submodule "posix/sqlite3db"]
+	path = posix/sqlite3db
+	url = git@github.com:ve3wwg/sqlite3db.git
