@@ -14,6 +14,7 @@
 
 #include "sqlite3db.hpp"
 #include "bt_geiger.hpp"
+#include "sliptty.hpp"
 
 #include <string>
 #include <sstream>
