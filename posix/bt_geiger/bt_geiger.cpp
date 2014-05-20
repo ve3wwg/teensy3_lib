@@ -14,6 +14,7 @@
 
 #include "sqlite3db.hpp"
 #include "bt_geiger.hpp"
+#include "sliptty.hpp"
 
 #include <string>
 #include <sstream>
@@ -32,6 +33,8 @@ static int opt_errs = false;
 static Sqlite3Db db;
 
 SlipTty bluetooth;
+
+u_packets *packet = 0;
 
 static void
 send_current_time() {
@@ -134,6 +137,25 @@ get_config(const char *config_key,bool& nullind,int& value) {
 	assert(s == SQLITE_ROW);
 
 	nullind = db.is_rnull(&value);
+}
+
+static uint8_t
+recv_packet() {
+	unsigned pktlen = 0;
+
+	for (;;) {
+		packet = (u_packets *)bluetooth.read(pktlen);
+
+		switch ( packet->pkt_type ) {
+		case PT_CurrentTime :
+			if ( pktlen == SZ_CURRENT_TIME )
+				return packet->pkt_type;
+			fprintf(stderr,"Incorrect packet length: %u\n",pktlen);
+			break;
+		default :
+			fprintf(stderr,"Unknown Packet Type: %d\n",packet->pkt_type);
+		}
+	}
 }
 
 int
@@ -248,7 +270,23 @@ main(int argc,char **argv) {
 
 	printf("Bluetooth device: %s, baud %d\n",opt_bluetooth_dev.c_str(),opt_speed);
 
-	sleep(1);
+	for (;;) {
+		uint8_t pkt_type = recv_packet();
+
+		switch ( pkt_type ) {
+		case PT_CurrentTime :
+			printf("CurrentTime { year=%u, month = %u, day = %u, hour = %u, minute = %u, second = %u }\n",
+				packet->pkt_curtime.year,
+				packet->pkt_curtime.month,
+				packet->pkt_curtime.mday,
+				packet->pkt_curtime.hour,
+				packet->pkt_curtime.min,
+				packet->pkt_curtime.sec);
+			break;
+		default :
+			assert(0);
+		}
+	}
 
 	send_current_time();
 	bluetooth.close();
