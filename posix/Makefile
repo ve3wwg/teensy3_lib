@@ -21,5 +21,6 @@ clean::
 distclean::
 	for proj in $(SHPROJS) ; do $(MAKE) -wC ./$$proj -$(MAKEFLAGS) -f Makefile.posix distclean TOP_DIR=$(TOP_DIR); done
 	for proj in $(PROJS) ; do $(MAKE) -wC ./$$proj -$(MAKEFLAGS) TOP_DIR=$(TOP_DIR) distclean; done
+	rm -f lib/libteensy.a
 
 # End
