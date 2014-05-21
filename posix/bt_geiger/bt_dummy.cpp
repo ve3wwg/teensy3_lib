@@ -116,13 +116,16 @@ main(int argc,char **argv) {
 
 		switch ( pkt_type ) {
 		case PT_CurrentTime :
-			printf("CurrentTime { year=%u, month = %u, day = %u, hour = %u, minute = %u, second = %u }\n",
-				packet->pkt_curtime.year + 2014,
-				packet->pkt_curtime.month,
-				packet->pkt_curtime.mday,
-				packet->pkt_curtime.hour,
-				packet->pkt_curtime.min,
-				packet->pkt_curtime.sec);
+			{
+				time_t t = static_cast<time_t>(packet->pkt_curtime.time);
+				struct tm td;
+				char buf[80];
+
+				localtime_r(&t,&td);
+				strftime(buf,sizeof buf,"%Y-%m=%d %H:%M:%D",&td);
+
+				printf("CurrentTime : %s  (%u vs %lu)\n",buf,packet->pkt_curtime.time,(unsigned long)time(0));
+			}
 			break;
 		default :
 			assert(0);
