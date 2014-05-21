@@ -162,6 +162,7 @@ tx_thread(void *arg) {
 			fflush(stdout);
 			t = now;
 		}
+		sleep(1);
 	}
 
 	return 0;
