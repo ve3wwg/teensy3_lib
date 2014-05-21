@@ -11,6 +11,7 @@
 #include <string.h>
 #include <termios.h>
 #include <assert.h>
+#include <pthread.h>
 
 #include "sqlite3db.hpp"
 #include "bt_geiger.hpp"
@@ -37,22 +38,11 @@ SlipTty bluetooth;
 u_packets *packet = 0;
 
 static void
-send_current_time() {
-	time_t t = time(0);
-	struct tm td;
-
-	gmtime_r(&t,&td);
-
+send_current_time(time_t now) {
 	s_current_time msg;
 
 	msg.pkttype = PT_CurrentTime;
-	msg.year = td.tm_year + 1900 - 2014;
-	msg.month = td.tm_mon + 1;
-	msg.mday = td.tm_mday;
-	msg.hour = td.tm_hour;
-	msg.min = td.tm_min;
-	msg.sec = td.tm_sec;
-
+	msg.time = uint32_t(now);
 	bluetooth.write(&msg,sizeof msg);
 }
 
@@ -156,6 +146,25 @@ recv_packet() {
 			fprintf(stderr,"Unknown Packet Type: %d\n",packet->pkt_type);
 		}
 	}
+}
+
+static void *
+tx_thread(void *arg) {
+	time_t t = 0, now;
+
+	t = time(0) - 50;	// Send time in 10 sec, then every 60 sec.
+
+	for (;;) {
+		now = time(0);
+		if ( now - t >= 60 ) {
+			send_current_time(now);
+			puts("Sent time.");
+			fflush(stdout);
+			t = now;
+		}
+	}
+
+	return 0;
 }
 
 int
@@ -270,25 +279,32 @@ main(int argc,char **argv) {
 
 	printf("Bluetooth device: %s, baud %d\n",opt_bluetooth_dev.c_str(),opt_speed);
 
+	pthread_t thread;
+
+	pthread_create(&thread,0,tx_thread,0);
+
 	for (;;) {
 		uint8_t pkt_type = recv_packet();
 
 		switch ( pkt_type ) {
 		case PT_CurrentTime :
-			printf("CurrentTime { year=%u, month = %u, day = %u, hour = %u, minute = %u, second = %u }\n",
-				packet->pkt_curtime.year,
-				packet->pkt_curtime.month,
-				packet->pkt_curtime.mday,
-				packet->pkt_curtime.hour,
-				packet->pkt_curtime.min,
-				packet->pkt_curtime.sec);
+			{
+				time_t t = static_cast<time_t>(packet->pkt_curtime.time);
+				struct tm td;
+				char buf[80];
+
+				localtime_r(&t,&td);
+				strftime(buf,sizeof buf,"%Y-%m-%d %H:%M:%S",&td);
+
+				printf("CurrentTime : %s  (%u vs %lu)\n",buf,packet->pkt_curtime.time,(unsigned long)time(0));
+				fflush(stdout);
+			}
 			break;
 		default :
 			assert(0);
 		}
 	}
 
-	send_current_time();
 	bluetooth.close();
 
 	return 0;
