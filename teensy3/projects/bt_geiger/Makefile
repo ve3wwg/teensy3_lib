@@ -12,7 +12,7 @@ DEFNS	+= -DUSB_SERIAL
 all:	bt_geiger.hex
 
 bt_geiger.elf: bt_geiger.o 
-	$(CXX) bt_geiger.o $(LDFLAGS) -o bt_geiger.elf -lslipser -lslip
+	$(CXX) bt_geiger.o $(LDFLAGS) -o bt_geiger.elf -lslipser -lslip -lfibers
 
 bt_geiger.hex: bt_geiger.elf
 	$(OBJSIZE) bt_geiger.elf
