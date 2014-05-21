@@ -18,16 +18,11 @@ enum PacketType {
 // Used to inform Teensy what the current date/time is
 //////////////////////////////////////////////////////////////////////
 
-#define SZ_CURRENT_TIME		1+6
+#define SZ_CURRENT_TIME		1+4
 
 struct s_current_time {
 	uint8_t		pkttype;
-	uint8_t		year;		// Years since 2014
-	uint8_t		month;		// Month 1-12
-	uint8_t		mday;		// Day of month 1-31
-	uint8_t		hour;		// 0-23
-	uint8_t		min;		// 0-59
-	uint8_t		sec;		// 0-59
+	uint32_t	time;		// Current time_t value
 } __attribute__((packed));
 
 //////////////////////////////////////////////////////////////////////
